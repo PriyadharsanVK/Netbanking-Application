@@ -4,17 +4,14 @@ import com.netbanking.dto.LoginRequest;
 import com.netbanking.dto.LoginResponse;
 import com.netbanking.dto.RegisterRequest;
 import com.netbanking.entity.User;
-import com.netbanking.service.UserService;
-import com.netbanking.util.PasswordUtil;
+import com.netbanking.repository.UserRepository;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-import com.netbanking.entity.Account;
-import com.netbanking.repository.AccountRepository;
-import java.util.List;
 
-
+import java.util.Map;
 import java.util.Optional;
 
 @Component
@@ -23,13 +20,13 @@ import java.util.Optional;
 @Produces(MediaType.APPLICATION_JSON)
 public class UserController {
 
-    private final UserService userService;
-    private final AccountRepository accountRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-
-    public UserController(UserService userService, AccountRepository accountRepository) {
-        this.userService = userService;
-        this.accountRepository = accountRepository;
+    public UserController(UserRepository userRepository,
+                          PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /* -------- REGISTER -------- */
@@ -38,18 +35,20 @@ public class UserController {
     @Path("/register")
     public Response register(RegisterRequest request) {
 
-        if (request.getUsername() == null || request.getPassword() == null) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("Username and password required")
-                    .build();
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new BadRequestException("Username already exists");
         }
 
-        User user = userService.register(
-                request.getUsername(),
-                request.getPassword()   // hashing later
+        User user = new User();
+        user.setRole("USER");
+        user.setUsername(request.getUsername());
+        user.setPasswordHash(
+                passwordEncoder.encode(request.getPassword())
         );
 
-        return Response.ok(user.getId()).build();
+        userRepository.save(user);
+
+        return Response.ok("User registered successfully").build();
     }
 
     /* -------- LOGIN -------- */
@@ -58,18 +57,14 @@ public class UserController {
     @Path("/login")
     public Response login(LoginRequest request) {
 
-        // 1. Validate basic input
-        if (request.getUsername() == null ||
-                request.getPassword() == null ||
-                request.getAccountNumber() == null) {
-
+        if (request.getUsername() == null || request.getPassword() == null) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("Username, password and account number are required")
+                    .entity("Username and password are required")
                     .build();
         }
 
-        // 2. Validate user credentials
-        Optional<User> userOpt = userService.findByUsername(request.getUsername());
+        Optional<User> userOpt =
+                userRepository.findByUsername(request.getUsername());
 
         if (userOpt.isEmpty()) {
             return Response.status(Response.Status.UNAUTHORIZED)
@@ -79,7 +74,7 @@ public class UserController {
 
         User user = userOpt.get();
 
-        if (!PasswordUtil.matches(
+        if (!passwordEncoder.matches(
                 request.getPassword(),
                 user.getPasswordHash()
         )) {
@@ -88,45 +83,13 @@ public class UserController {
                     .build();
         }
 
-        // 3. Fetch all accounts of this user
-        List<Account> userAccounts =
-                accountRepository.findByUserId(user.getId());
-
-        // 4. If user has NO accounts at all
-        if (userAccounts.isEmpty()) {
-            return Response.status(Response.Status.NOT_FOUND)
-                    .entity("No account is linked with this user")
-                    .build();
-        }
-
-        // 5. Validate account ownership
-        boolean accountBelongsToUser = userAccounts.stream()
-                .anyMatch(acc ->
-                        acc.getAccountNumber()
-                                .equals(request.getAccountNumber())
-                );
-
-        if (!accountBelongsToUser) {
-            return Response.status(Response.Status.FORBIDDEN)
-                    .entity("This account does not belong to you")
-                    .build();
-        }
-
-        // 6. Successful login
-        Account loggedInAccount = userAccounts.stream()
-                .filter(acc -> acc.getAccountNumber()
-                        .equals(request.getAccountNumber()))
-                .findFirst()
-                .get();
-
+        // ✅ Login successful
         return Response.ok(
-                new LoginResponse(
-                        user.getId(),
-                        loggedInAccount.getId(),
-                        loggedInAccount.getAccountNumber()
+                Map.of(
+                        "userId", user.getId(),
+                        "role", user.getRole()
                 )
         ).build();
 
     }
-
 }

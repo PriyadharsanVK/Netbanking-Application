@@ -4,6 +4,9 @@ import com.netbanking.entity.Account;
 import com.netbanking.entity.Transaction;
 import com.netbanking.repository.AccountRepository;
 import com.netbanking.repository.TransactionRepository;
+import jakarta.ws.rs.BadRequestException;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,8 +61,13 @@ public class TransactionService {
         }
 
         if (from.getBalance().compareTo(amount) < 0) {
-            throw new IllegalArgumentException("Insufficient balance");
+            throw new WebApplicationException(
+                    Response.status(Response.Status.BAD_REQUEST)
+                            .entity("Insufficient balance. Please check your available funds.")
+                            .build()
+            );
         }
+
 
         // debit source
         from.setBalance(from.getBalance().subtract(amount));

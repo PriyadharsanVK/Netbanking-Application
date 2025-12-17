@@ -1,0 +1,13 @@
+package com.netbanking.repository;
+
+import com.netbanking.entity.Beneficiary;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface BeneficiaryRepository extends JpaRepository<Beneficiary, Long> {
+
+    List<Beneficiary> findByUserIdAndActiveTrue(Long userId);
+
+    boolean existsByUserIdAndAccountNumber(Long userId, String accountNumber);
+}

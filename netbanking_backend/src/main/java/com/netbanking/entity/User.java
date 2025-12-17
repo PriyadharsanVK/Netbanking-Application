@@ -7,6 +7,17 @@ import java.time.Instant;
 @Table(name = "users")
 public class User {
 
+    @Column(nullable = false)
+    private String role;   // USER or ADMIN
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

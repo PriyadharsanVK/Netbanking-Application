@@ -1,5 +1,6 @@
 package com.netbanking.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -25,7 +26,8 @@ public class Account {
     private String status = "ACTIVE";
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id")
+    @JsonIgnore
     private User user;
 
     @Column(name = "created_at", updatable = false)

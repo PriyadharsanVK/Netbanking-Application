@@ -36,7 +36,7 @@ public class AccountController {
             @PathParam("userId") Long userId,
             @QueryParam("exclude") Long excludeAccountId
     ) {
-        List<Account> accounts = accountRepository.findByUserId(userId);
+        List<Account> accounts = accountRepository.findByUser_Id(userId);
 
         if (excludeAccountId != null) {
             accounts = accounts.stream()
@@ -107,5 +107,24 @@ public class AccountController {
 
         return Response.ok(response).build();
     }
+    @GET
+    @Path("/admin/all")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getAllAccounts() {
+
+        List<Account> accounts = accountRepository.findAll();
+
+        List<AccountResponse> response = accounts.stream()
+                .map(acc -> new AccountResponse(
+                        acc.getId(),
+                        acc.getAccountNumber(),
+                        acc.getAccountType(),
+                        acc.getBalance()
+                ))
+                .toList();
+
+        return Response.ok(response).build();
+    }
+
 
 }

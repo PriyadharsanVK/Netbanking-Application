@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { loginUser } from "../services/api";
+import { loginUser } from "../services/api.js";
+import Register from "./Register.jsx";
 
 function Login({ onLogin }) {
+  const [showRegister, setShowRegister] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
   const [message, setMessage] = useState("");
 
   async function handleLogin(e) {
@@ -12,22 +13,32 @@ function Login({ onLogin }) {
     setMessage("");
 
     try {
-      // backend returns { userId, accountId, accountNumber }
-      const session = await loginUser({
+      const response = await loginUser({
         username,
-        password,
-        accountNumber,
+        password
       });
 
-      onLogin(session); // ✅ pass full session to App
+      console.log("Login response:", response);
+
+      if (!response || !response.userId) {
+        throw new Error("Invalid login response from server");
+      }
+
+      onLogin(response);
+      localStorage.setItem("session", JSON.stringify(response));
     } catch (err) {
+      console.error(err);
       setMessage(err.message);
     }
   }
 
+  if (showRegister) {
+    return <Register onBack={() => setShowRegister(false)} />;
+  }
+
   return (
     <div style={{ padding: "40px" }}>
-      <h2>User Login</h2>
+      <h2>Login</h2>
 
       <form onSubmit={handleLogin}>
         <div>
@@ -39,6 +50,8 @@ function Login({ onLogin }) {
           />
         </div>
 
+        <br />
+
         <div>
           <label>Password:</label><br />
           <input
@@ -49,20 +62,19 @@ function Login({ onLogin }) {
           />
         </div>
 
-        <div>
-          <label>Account Number:</label><br />
-          <input
-            value={accountNumber}
-            onChange={(e) => setAccountNumber(e.target.value)}
-            required
-          />
-        </div>
-
         <br />
+
         <button type="submit">Login</button>
       </form>
 
-      {message && <p>{message}</p>}
+      {message && <p style={{ color: "red" }}>{message}</p>}
+
+      <hr />
+
+      <p>New user?</p>
+      <button onClick={() => setShowRegister(true)}>
+        Register
+      </button>
     </div>
   );
 }

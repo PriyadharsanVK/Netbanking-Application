@@ -1,6 +1,31 @@
 const BASE_URL = "http://localhost:8080/api";
 
-/* ---------- USER LOGIN ---------- */
+/* ===================== COMMON ERROR HANDLER ===================== */
+
+async function parseError(response) {
+  const text = await response.text();
+
+  try {
+    const json = JSON.parse(text);
+    return json.message || json.error || "Request failed";
+  } catch {
+    return text || "Request failed";
+  }
+}
+
+/* ===================== USER ===================== */
+
+export async function registerUser(data) {
+  const response = await fetch(`${BASE_URL}/users/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.text();
+}
+
 export async function loginUser(data) {
   const response = await fetch(`${BASE_URL}/users/login`, {
     method: "POST",
@@ -8,97 +33,196 @@ export async function loginUser(data) {
     body: JSON.stringify(data),
   });
 
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message);
-  }
-
-  return response.json(); // { userId, accountId, accountNumber }
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.json(); // { userId, role }
 }
 
+/* ===================== ACCOUNTS ===================== */
 
-/* ---------- GET USER ACCOUNTS ---------- */
 export async function getUserAccounts(userId) {
   const response = await fetch(`${BASE_URL}/accounts/user/${userId}`);
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch accounts");
-  }
-
-  return response.json();
-}
-
-export async function getOtherAccounts(userId, excludeAccountId) {
-  const response = await fetch(
-    `${BASE_URL}/accounts/user/${userId}?exclude=${excludeAccountId}`
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch accounts");
-  }
-
+  if (!response.ok) throw new Error(await parseError(response));
   return response.json();
 }
 
 export async function deposit(accountId, amount) {
   const response = await fetch(`${BASE_URL}/accounts/deposit`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      accountId,
-      amount,
-    }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accountId, amount }),
   });
 
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message);
-  }
-
-  return response.text(); // or json if backend returns json
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.text();
 }
+
+/* ===================== TRANSACTIONS ===================== */
 
 export async function getTransactionHistory(accountId) {
   const response = await fetch(
     `${BASE_URL}/transactions/account/${accountId}`
   );
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch transaction history");
-  }
-
+  if (!response.ok) throw new Error(await parseError(response));
   return response.json();
 }
-export async function selfTransfer(fromAccountId, toAccountId, amount) {
-  const response = await fetch(`${BASE_URL}/accounts/transfer`, {
+
+/* ===================== BENEFICIARIES ===================== */
+
+export async function addBeneficiary(data) {
+  const response = await fetch(`${BASE_URL}/beneficiaries`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      fromAccountId,
-      toAccountId,
-      amount,
-    }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
   });
 
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message);
-  }
-
+  if (!response.ok) throw new Error(await parseError(response));
   return response.text();
 }
-export async function getAccountByNumber(accountNumber) {
+
+export async function getUserBeneficiaries(userId) {
   const response = await fetch(
-    `${BASE_URL}/accounts/number/${accountNumber}`
+    `${BASE_URL}/beneficiaries/user/${userId}`
   );
 
-  if (!response.ok) {
-    throw new Error("Destination account not found");
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.json();
+}
+
+export async function deleteBeneficiary(beneficiaryId) {
+  const response = await fetch(
+    `${BASE_URL}/beneficiaries/${beneficiaryId}`,
+    { method: "DELETE" }
+  );
+
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.text();
+}
+
+export async function transferToBeneficiary(
+  beneficiaryId,
+  fromAccountId,
+  amount
+) {
+  const response = await fetch(
+    `${BASE_URL}/beneficiaries/${beneficiaryId}/transfer`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fromAccountId, amount }),
+    }
+  );
+
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.text();
+}
+
+/* ===================== ACCOUNT REQUEST ===================== */
+
+export async function createAccountRequest(data) {
+  const response = await fetch(`${BASE_URL}/account-requests`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.text();
+}
+
+export async function getUserAccountRequests(userId) {
+  const response = await fetch(
+    `${BASE_URL}/account-requests/user/${userId}`
+  );
+
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.json();
+}
+
+/* ===================== ADMIN ===================== */
+
+/* --- Account Requests --- */
+
+export async function getAllAccountRequests() {
+  const response = await fetch(`${BASE_URL}/admin/account-requests`);
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.json();
+}
+
+export async function approveAccountRequest(requestId) {
+  const response = await fetch(
+    `${BASE_URL}/admin/account-requests/${requestId}/approve`,
+    { method: "POST" }
+  );
+
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.text();
+}
+
+export async function rejectAccountRequest(requestId) {
+  const response = await fetch(
+    `${BASE_URL}/admin/account-requests/${requestId}/reject`,
+    { method: "POST" }
+  );
+
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.text();
+}
+
+/* --- All Accounts --- */
+
+export async function getAllAccounts() {
+  const response = await fetch(`${BASE_URL}/admin/accounts`);
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.json();
+}
+
+// ======================= CARDS =======================
+
+// Get cards for an account
+export async function getAccountCards(accountId) {
+  const res = await fetch(
+    `${BASE_URL}/cards/account/${accountId}`
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to load cards");
   }
 
-  return response.json();
+  return res.json();
+}
+
+// Get card requests for an account
+export async function getAccountCardRequests(accountId) {
+  const res = await fetch(
+    `${BASE_URL}/card-requests/account/${accountId}`
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to load card requests");
+  }
+
+  return res.json();
+}
+
+// Request a card
+export async function requestCard(accountId, cardType) {
+  const res = await fetch(
+    `${BASE_URL}/card-requests`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        accountId,
+        cardType
+      })
+    }
+  );
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(msg || "Card request failed");
+  }
+
+  return res.text();
 }
