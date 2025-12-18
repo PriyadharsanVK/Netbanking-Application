@@ -73,4 +73,8 @@ public class Transaction {
     public Instant getCreatedAt() {
         return createdAt;
     }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
 }

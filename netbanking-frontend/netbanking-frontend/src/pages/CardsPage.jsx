@@ -38,16 +38,12 @@ function CardsPage({ session }) {
 
     try {
       await requestCard(accountId, cardType);
-      setMessage("Card request submitted successfully");
-      setCardType("DEBIT");
-      loadData();
+      setMessage(`${cardType} card request submitted successfully`);
+      await loadData();
     } catch (err) {
       setError(err.message);
     }
   }
-
-  const hasPendingRequest =
-    requests.some(r => r.status === "PENDING");
 
   return (
     <div style={{ padding: "40px", maxWidth: "800px" }}>
@@ -111,7 +107,6 @@ function CardsPage({ session }) {
         <select
           value={cardType}
           onChange={e => setCardType(e.target.value)}
-          disabled={hasPendingRequest}
         >
           <option value="DEBIT">Debit Card</option>
           <option value="CREDIT">Credit Card</option>
@@ -120,13 +115,8 @@ function CardsPage({ session }) {
 
       <br /><br />
 
-      <button
-        onClick={handleRequest}
-        disabled={hasPendingRequest}
-      >
-        {hasPendingRequest
-          ? "Card Request Pending"
-          : "Request Card"}
+      <button onClick={handleRequest}>
+        Request Card
       </button>
     </div>
   );

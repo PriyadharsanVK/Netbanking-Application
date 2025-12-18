@@ -6,6 +6,7 @@ import ManageBeneficiaries from "./pages/ManageBeneficiaries.jsx";
 import Transfer from "./pages/Transfer.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import CardsPage from "./pages/CardsPage";
+import LoansPage from "./pages/LoansPage";   // ✅ NEW
 
 function App() {
   const [session, setSession] = useState(() => {
@@ -116,6 +117,14 @@ function App() {
         >
           Cards
         </button>
+
+        {/* ✅ NEW */}
+        <button
+          onClick={() => setScreen("loans")}
+          style={{ marginLeft: "10px" }}
+        >
+          Loans
+        </button>
       </div>
 
       {/* SCREEN SWITCH */}
@@ -125,6 +134,7 @@ function App() {
       )}
       {screen === "transfer" && <Transfer session={userSession} />}
       {screen === "cards" && <CardsPage session={userSession} />}
+      {screen === "loans" && <LoansPage session={userSession} />} {/* ✅ NEW */}
     </div>
   );
 }

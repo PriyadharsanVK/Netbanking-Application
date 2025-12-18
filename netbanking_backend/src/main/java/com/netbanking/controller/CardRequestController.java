@@ -4,6 +4,7 @@ import com.netbanking.dto.CreateCardRequest;
 import com.netbanking.entity.Account;
 import com.netbanking.entity.CardRequest;
 import com.netbanking.repository.AccountRepository;
+import com.netbanking.repository.CardRepository;
 import com.netbanking.repository.CardRequestRepository;
 
 import jakarta.ws.rs.*;
@@ -20,11 +21,13 @@ import java.util.List;
 public class CardRequestController {
 
     private final CardRequestRepository cardRequestRepository;
+    private final CardRepository cardRepository;
     private final AccountRepository accountRepository;
 
-    public CardRequestController(CardRequestRepository cardRequestRepository,
+    public CardRequestController(CardRequestRepository cardRequestRepository, CardRepository cardRepository,
                                  AccountRepository accountRepository) {
         this.cardRequestRepository = cardRequestRepository;
+        this.cardRepository = cardRepository;
         this.accountRepository = accountRepository;
     }
 
@@ -34,28 +37,47 @@ public class CardRequestController {
         Account account = accountRepository.findById(request.getAccountId())
                 .orElseThrow(() -> new NotFoundException("Account not found"));
 
-        // Prevent multiple pending requests for same account + card type
-        boolean alreadyPending =
-                cardRequestRepository.existsByAccount_IdAndStatusAndCardType(
+        String cardType = request.getCardType().toUpperCase();
+
+        /* 1️⃣ ACTIVE CARD CHECK */
+        boolean hasActiveCard =
+                cardRepository.existsByAccount_IdAndCardTypeAndStatus(
                         account.getId(),
-                        "PENDING",
-                        request.getCardType()
+                        cardType,
+                        "ACTIVE"
                 );
-        if (alreadyPending) {
+
+        if (hasActiveCard) {
             throw new WebApplicationException(
-                    "Card request already pending for this account",
+                    "You already have an active " + cardType + " card",
                     Response.Status.BAD_REQUEST
             );
         }
 
+        /* 2️⃣ PENDING REQUEST CHECK */
+        boolean hasPendingRequest =
+                cardRequestRepository.existsByAccount_IdAndCardTypeAndStatus(
+                        account.getId(),
+                        cardType,
+                        "PENDING"
+                );
+
+        if (hasPendingRequest) {
+            throw new WebApplicationException(
+                    "A " + cardType + " card request is already pending",
+                    Response.Status.BAD_REQUEST
+            );
+        }
+
+        /* 3️⃣ CREATE REQUEST */
         CardRequest cardRequest = new CardRequest();
         cardRequest.setAccount(account);
-        cardRequest.setCardType(request.getCardType());
+        cardRequest.setCardType(cardType);
         cardRequest.setStatus("PENDING");
 
         cardRequestRepository.save(cardRequest);
 
-        return Response.ok("Card request submitted").build();
+        return Response.ok("Card request submitted successfully").build();
     }
 
     /* ---------- GET ACCOUNT CARD REQUESTS ---------- */

@@ -11,10 +11,10 @@ public interface CardRequestRepository extends JpaRepository<CardRequest, Long> 
     List<CardRequest> findByAccount_Id(Long accountId);
 
     // Prevent multiple pending requests per account
-    boolean existsByAccount_IdAndStatusAndCardType(
+    boolean existsByAccount_IdAndCardTypeAndStatus(
             Long accountId,
-            String status,
-            String cardType
+            String cardType,
+            String status
     );
 
     // Admin view

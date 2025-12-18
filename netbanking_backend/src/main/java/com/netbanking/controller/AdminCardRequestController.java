@@ -27,10 +27,18 @@ public class AdminCardRequestController {
         this.cardRepository = cardRepository;
     }
 
-    /* ---------- VIEW ALL CARD REQUESTS ---------- */
+    /* ---------- VIEW CARD REQUESTS (OPTIONAL FILTER) ---------- */
     @GET
-    public Response getAllRequests() {
-        List<CardRequest> requests = cardRequestRepository.findAll();
+    public Response getRequests(@QueryParam("status") String status) {
+
+        List<CardRequest> requests;
+
+        if (status == null || status.isBlank()) {
+            requests = cardRequestRepository.findAll();
+        } else {
+            requests = cardRequestRepository.findByStatus(status.toUpperCase());
+        }
+
         return Response.ok(requests).build();
     }
 
@@ -39,25 +47,45 @@ public class AdminCardRequestController {
     @Path("/{id}/approve")
     public Response approve(@PathParam("id") Long requestId) {
 
-        CardRequest req = cardRequestRepository.findById(requestId)
+        CardRequest request = cardRequestRepository.findById(requestId)
                 .orElseThrow(() -> new NotFoundException("Card request not found"));
 
-        if (!"PENDING".equals(req.getStatus())) {
-            throw new BadRequestException("Request already processed");
+        if (!"PENDING".equals(request.getStatus())) {
+            throw new WebApplicationException(
+                    "Request already processed",
+                    Response.Status.BAD_REQUEST
+            );
+        }
+
+        String cardType = request.getCardType();
+        Long accountId = request.getAccount().getId();
+
+        boolean activeExists =
+                cardRepository.existsByAccount_IdAndCardTypeAndStatus(
+                        accountId,
+                        cardType,
+                        "ACTIVE"
+                );
+
+        if (activeExists) {
+            throw new WebApplicationException(
+                    "Active " + cardType + " card already exists",
+                    Response.Status.BAD_REQUEST
+            );
         }
 
         Card card = new Card();
-        card.setAccount(req.getAccount());
-        card.setCardType(req.getCardType());
-        card.setCardNumber("CARD" + System.nanoTime());
+        card.setAccount(request.getAccount());
+        card.setCardType(cardType);
+        card.setCardNumber(generateCardNumber(cardType));
         card.setStatus("ACTIVE");
-        card.setCreatedAt(Instant.now());
         card.setExpiryDate(LocalDate.now().plusYears(5));
+        card.setCreatedAt(Instant.now());
 
         cardRepository.save(card);
 
-        req.setStatus("APPROVED");
-        cardRequestRepository.save(req);
+        request.setStatus("APPROVED");
+        cardRequestRepository.save(request);
 
         return Response.ok("Card approved and issued").build();
     }
@@ -67,16 +95,24 @@ public class AdminCardRequestController {
     @Path("/{id}/reject")
     public Response reject(@PathParam("id") Long requestId) {
 
-        CardRequest req = cardRequestRepository.findById(requestId)
+        CardRequest request = cardRequestRepository.findById(requestId)
                 .orElseThrow(() -> new NotFoundException("Card request not found"));
 
-        if (!"PENDING".equals(req.getStatus())) {
-            throw new BadRequestException("Request already processed");
+        if (!"PENDING".equals(request.getStatus())) {
+            throw new WebApplicationException(
+                    "Request already processed",
+                    Response.Status.BAD_REQUEST
+            );
         }
 
-        req.setStatus("REJECTED");
-        cardRequestRepository.save(req);
+        request.setStatus("REJECTED");
+        cardRequestRepository.save(request);
 
         return Response.ok("Card request rejected").build();
+    }
+
+    /* ---------- HELPERS ---------- */
+    private String generateCardNumber(String type) {
+        return (type.equals("DEBIT") ? "D-" : "C-") + System.currentTimeMillis();
     }
 }

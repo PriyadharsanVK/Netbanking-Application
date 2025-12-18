@@ -7,7 +7,7 @@ import {
 
 const PAGE_SIZE = 5;
 
-function Dashboard({ session }) {
+function Dashboard({ session, onNavigate }) {
   const { userId, accountId } = session;
 
   const [currentAccount, setCurrentAccount] = useState(null);
@@ -113,6 +113,24 @@ function Dashboard({ session }) {
 
       <hr />
 
+      {/* ---------- QUICK ACTIONS ---------- */}
+      <div style={{ marginBottom: "20px" }}>
+        <button onClick={handleViewTransactions}>
+          {showTransactions ? "Hide Transactions" : "View Transactions"}
+        </button>
+
+        {onNavigate && (
+          <button
+            onClick={() => onNavigate("loans")}
+            style={{ marginLeft: "10px" }}
+          >
+            Go to Loans
+          </button>
+        )}
+      </div>
+
+      <hr />
+
       {/* ---------- DEPOSIT ---------- */}
       <h3>Deposit</h3>
       <input
@@ -124,12 +142,6 @@ function Dashboard({ session }) {
         Deposit
       </button>
       {depositMessage && <p>{depositMessage}</p>}
-
-      <hr />
-
-      <button onClick={handleViewTransactions}>
-        {showTransactions ? "Hide Transactions" : "View Transactions"}
-      </button>
 
       {/* ---------- TRANSACTION HISTORY ---------- */}
       {showTransactions && (

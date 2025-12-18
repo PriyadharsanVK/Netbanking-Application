@@ -226,3 +226,166 @@ export async function requestCard(accountId, cardType) {
 
   return res.text();
 }
+
+// ======================= ADMIN CARDS =======================
+
+// ---------- CARD REQUESTS (ADMIN) ----------
+
+// View all card requests
+export async function getAllCardRequests() {
+  const response = await fetch(`${BASE_URL}/admin/card-requests`);
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.json();
+}
+
+// Approve card request
+export async function approveCardRequest(requestId) {
+  const response = await fetch(
+    `${BASE_URL}/admin/card-requests/${requestId}/approve`,
+    { method: "POST" }
+  );
+
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.text();
+}
+
+// Reject card request
+export async function rejectCardRequest(requestId) {
+  const response = await fetch(
+    `${BASE_URL}/admin/card-requests/${requestId}/reject`,
+    { method: "POST" }
+  );
+
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.text();
+}
+
+// ---------- CARDS (ADMIN) ----------
+
+// View all issued cards
+export async function getAllCards() {
+  const response = await fetch(`${BASE_URL}/admin/cards`);
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.json();
+}
+
+// Block a card
+export async function blockCard(cardId) {
+  const response = await fetch(
+    `${BASE_URL}/admin/cards/${cardId}/block`,
+    { method: "POST" }
+  );
+
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.text();
+}
+
+// Unblock a card
+export async function unblockCard(cardId) {
+  const response = await fetch(
+    `${BASE_URL}/admin/cards/${cardId}/unblock`,
+    { method: "POST" }
+  );
+
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.text();
+}
+
+// ======================= LOANS =======================
+
+// ---------- USER LOANS ----------
+
+// Request a loan
+export async function requestLoan(data) {
+  const response = await fetch(`${BASE_URL}/loan-requests`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  });
+
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.text();
+}
+
+// Get loan requests for an account
+export async function getAccountLoanRequests(accountId) {
+  const response = await fetch(
+    `${BASE_URL}/loan-requests/account/${accountId}`
+  );
+
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.json();
+}
+
+// Get active loans for an account
+export async function getAccountLoans(accountId) {
+  const response = await fetch(
+    `${BASE_URL}/loans/account/${accountId}`
+  );
+
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.json();
+}
+
+// ---------- ADMIN LOANS ----------
+
+// View all loan requests
+export async function getAllLoanRequests() {
+  const response = await fetch(`${BASE_URL}/admin/loan-requests`);
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.json();
+}
+
+// Approve loan request
+export async function approveLoanRequest(requestId) {
+  const response = await fetch(
+    `${BASE_URL}/admin/loan-requests/${requestId}/approve`,
+    { method: "POST" }
+  );
+
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.text();
+}
+
+// Reject loan request
+export async function rejectLoanRequest(requestId) {
+  const response = await fetch(
+    `${BASE_URL}/admin/loan-requests/${requestId}/reject`,
+    { method: "POST" }
+  );
+
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.text();
+}
+// View all issued loans
+export async function getAllLoans() {
+  const response = await fetch(`${BASE_URL}/admin/loans`);
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.json();
+}
+
+// ======================= LOANS =======================
+
+// Pay EMI
+export async function payEmi(loanId) {
+  const res = await fetch(
+    `${BASE_URL}/loans/${loanId}/pay-emi`,
+    { method: "POST" }
+  );
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(msg || "EMI payment failed");
+  }
+
+  return res.text();
+}
+export async function forecloseLoan(loanId) {
+  const res = await fetch(
+    `${BASE_URL}/loans/${loanId}/foreclose`,
+    { method: "POST" }
+  );
+
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.text();
+}

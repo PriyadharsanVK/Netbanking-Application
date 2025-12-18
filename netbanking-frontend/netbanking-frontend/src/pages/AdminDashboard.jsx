@@ -5,16 +5,20 @@ import {
   rejectAccountRequest,
   getAllAccounts
 } from "../services/api";
+import AdminCardsPage from "./AdminCardsPage";
+import AdminLoansPage from "./AdminLoansPage";
 
-function AdminDashboard({onLogout}) {
+function AdminDashboard({ onLogout }) {
   const [requests, setRequests] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  // ✅ UI TOGGLES
+  // UI TOGGLES
   const [showRequests, setShowRequests] = useState(false);
   const [showAccounts, setShowAccounts] = useState(false);
+  const [showCards, setShowCards] = useState(false);
+  const [showLoans, setShowLoans] = useState(false);
 
   useEffect(() => {
     loadAll();
@@ -55,8 +59,16 @@ function AdminDashboard({onLogout}) {
     }
   }
 
+  function resetViews() {
+    setShowRequests(false);
+    setShowAccounts(false);
+    setShowCards(false);
+    setShowLoans(false);
+  }
+
   return (
     <div style={{ padding: "40px" }}>
+      {/* HEADER */}
       <div
         style={{
           display: "flex",
@@ -69,10 +81,7 @@ function AdminDashboard({onLogout}) {
 
         <button
           onClick={() => {
-            const confirmLogout = window.confirm(
-              "Are you sure you want to logout?"
-            );
-            if (confirmLogout) {
+            if (window.confirm("Are you sure you want to logout?")) {
               onLogout();
             }
           }}
@@ -89,25 +98,50 @@ function AdminDashboard({onLogout}) {
         </button>
       </div>
 
-
       {error && <p style={{ color: "red" }}>{error}</p>}
       {message && <p style={{ color: "green" }}>{message}</p>}
 
-      {/* ================= BUTTON CONTROLS ================= */}
-      <button onClick={() => setShowRequests(prev => !prev)}>
-        {showRequests ? "Hide Requests" : "View Requests"}
+      {/* BUTTON CONTROLS */}
+      <button onClick={() => {
+        resetViews();
+        setShowRequests(true);
+      }}>
+        Account Requests
       </button>
 
       <button
-        onClick={() => setShowAccounts(prev => !prev)}
+        onClick={() => {
+          resetViews();
+          setShowAccounts(true);
+        }}
         style={{ marginLeft: "10px" }}
       >
-        {showAccounts ? "Hide All Accounts" : "View All Accounts"}
+        All Accounts
+      </button>
+
+      <button
+        onClick={() => {
+          resetViews();
+          setShowCards(true);
+        }}
+        style={{ marginLeft: "10px" }}
+      >
+        Cards
+      </button>
+
+      <button
+        onClick={() => {
+          resetViews();
+          setShowLoans(true);
+        }}
+        style={{ marginLeft: "10px" }}
+      >
+        Loans
       </button>
 
       <hr />
 
-      {/* ================= ACCOUNT REQUESTS ================= */}
+      {/* ACCOUNT REQUESTS */}
       {showRequests && (
         <>
           <h3>Account Requests</h3>
@@ -137,17 +171,11 @@ function AdminDashboard({onLogout}) {
                     <td>
                       {req.status === "PENDING" ? (
                         <>
-                          <button
-                            onClick={() =>
-                              handleApprove(req.requestId)
-                            }
-                          >
+                          <button onClick={() => handleApprove(req.requestId)}>
                             Approve
                           </button>
                           <button
-                            onClick={() =>
-                              handleReject(req.requestId)
-                            }
+                            onClick={() => handleReject(req.requestId)}
                             style={{ marginLeft: "10px" }}
                           >
                             Reject
@@ -165,7 +193,7 @@ function AdminDashboard({onLogout}) {
         </>
       )}
 
-      {/* ================= ALL ACCOUNTS ================= */}
+      {/* ALL ACCOUNTS */}
       {showAccounts && (
         <>
           <h3>All Accounts</h3>
@@ -196,6 +224,12 @@ function AdminDashboard({onLogout}) {
           )}
         </>
       )}
+
+      {/* CARDS */}
+      {showCards && <AdminCardsPage />}
+
+      {/* LOANS */}
+      {showLoans && <AdminLoansPage />}
     </div>
   );
 }
