@@ -8,109 +8,109 @@ import {
 import AdminCardsPage from "./AdminCardsPage";
 import AdminLoansPage from "./AdminLoansPage";
 
+const REQUEST_PAGE_SIZE = 5;
+const ACCOUNT_PAGE_SIZE = 5;
+
 function AdminDashboard({ onLogout }) {
 
   /* ===================== COMMON ===================== */
-
-  const [requests, setRequests] = useState([]);
-  const [accounts, setAccounts] = useState([]);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
   /* ===================== UI TOGGLES ===================== */
-
   const [showRequests, setShowRequests] = useState(true);
   const [showAccounts, setShowAccounts] = useState(false);
   const [showCards, setShowCards] = useState(false);
   const [showLoans, setShowLoans] = useState(false);
 
-  /* ===================== ACCOUNTS STATE ===================== */
-
-  const [page, setPage] = useState(0);
-  const size = 5;
-  const [totalPages, setTotalPages] = useState(0);
-
+  /* ===================== ACCOUNTS ===================== */
+  const [accounts, setAccounts] = useState([]);
+  const [accountPage, setAccountPage] = useState(0);
+  const [accountTotalPages, setAccountTotalPages] = useState(0);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortDir, setSortDir] = useState("DESC");
 
-  /* ===================== REQUESTS STATE ===================== */
+  /* ===================== REQUESTS ===================== */
+  const [requestView, setRequestView] = useState("PENDING");
+  const [historyStatus, setHistoryStatus] = useState("ALL");
 
-  const [requestFilter, setRequestFilter] = useState("PENDING");
+  const [requests, setRequests] = useState([]);
+  const [historyRequests, setHistoryRequests] = useState([]);
+
   const [requestPage, setRequestPage] = useState(0);
-  const requestPageSize = 5;
   const [requestTotalPages, setRequestTotalPages] = useState(0);
-
   const [requestSearch, setRequestSearch] = useState("");
-  const [requestSortBy, setRequestSortBy] = useState("createdAt");
-  const [requestSortDir, setRequestSortDir] = useState("DESC");
 
   /* ===================== LOADERS ===================== */
 
-  async function loadRequests(status = requestFilter, page = 0) {
-    try {
-      const data = await getAllAccountRequests({
-        status,
-        page,
-        size: requestPageSize
-      });
+  async function loadPendingRequests(page = 0) {
+    const data = await getAllAccountRequests({
+      status: "PENDING",
+      page,
+      size: REQUEST_PAGE_SIZE
+    });
 
-      setRequests(data.content || []);
-      setRequestTotalPages(data.totalPages || 0);
-    } catch (err) {
-      setError(err.message);
-    }
+    setRequests(data.content || []);
+    setRequestTotalPages(data.totalPages || 0);
+  }
+
+  async function loadHistoryRequests() {
+    const approved = await getAllAccountRequests({
+      status: "APPROVED",
+      page: 0,
+      size: 1000
+    });
+
+    const rejected = await getAllAccountRequests({
+      status: "REJECTED",
+      page: 0,
+      size: 1000
+    });
+
+    setHistoryRequests([
+      ...(approved.content || []),
+      ...(rejected.content || [])
+    ]);
   }
 
   async function loadAccounts() {
-    try {
-      const data = await getAllAccounts({
-        page,
-        size,
-        sortBy,
-        sortDir,
-        search
-      });
+    const data = await getAllAccounts({
+      page: accountPage,
+      size: ACCOUNT_PAGE_SIZE,
+      sortBy,
+      sortDir,
+      search
+    });
 
-      setAccounts(data.content || []);
-      setTotalPages(data.totalPages || 0);
-    } catch (err) {
-      setError(err.message);
-    }
+    setAccounts(data.content || []);
+    setAccountTotalPages(data.totalPages || 0);
   }
 
   /* ===================== EFFECTS ===================== */
 
   useEffect(() => {
-    loadRequests("PENDING", 0);
+    loadPendingRequests(0);
   }, []);
 
   useEffect(() => {
     if (showAccounts) {
       loadAccounts();
     }
-  }, [page, sortBy, sortDir, search, showAccounts]);
+  }, [showAccounts, accountPage, sortBy, sortDir, search]);
 
   /* ===================== ACTIONS ===================== */
 
   async function handleApprove(id) {
-    try {
-      await approveAccountRequest(id);
-      setMessage("Account approved successfully");
-      loadRequests(requestFilter, requestPage);
-    } catch (err) {
-      setError(err.message);
-    }
+    await approveAccountRequest(id);
+    setMessage("Account approved successfully");
+    loadPendingRequests(requestPage);
   }
 
   async function handleReject(id) {
-    try {
-      await rejectAccountRequest(id);
-      setMessage("Account rejected successfully");
-      loadRequests(requestFilter, requestPage);
-    } catch (err) {
-      setError(err.message);
-    }
+    await rejectAccountRequest(id);
+    setMessage("Account rejected successfully");
+    loadPendingRequests(requestPage);
   }
 
   function resetViews() {
@@ -122,7 +122,7 @@ function AdminDashboard({ onLogout }) {
 
   function toggleSort(field) {
     if (sortBy === field) {
-      setSortDir(sortDir === "ASC" ? "DESC" : "ASC");
+      setSortDir(d => (d === "ASC" ? "DESC" : "ASC"));
     } else {
       setSortBy(field);
       setSortDir("ASC");
@@ -131,46 +131,43 @@ function AdminDashboard({ onLogout }) {
 
   /* ===================== DERIVED REQUESTS ===================== */
 
-  const visibleRequests = [...requests]
+  const filteredHistory = historyRequests
+    .filter(r => historyStatus === "ALL" || r.status === historyStatus)
     .filter(r =>
       r.username?.toLowerCase().includes(requestSearch.toLowerCase()) ||
       r.accountType?.toLowerCase().includes(requestSearch.toLowerCase()) ||
       r.phone?.includes(requestSearch)
-    )
-    .sort((a, b) => {
-      let aVal = a[requestSortBy];
-      let bVal = b[requestSortBy];
+    );
 
-      if (!aVal || !bVal) return 0;
+  const historyTotalPages = Math.ceil(filteredHistory.length / REQUEST_PAGE_SIZE);
 
-      if (typeof aVal === "string") {
-        aVal = aVal.toLowerCase();
-        bVal = bVal.toLowerCase();
-      }
+  const paginatedHistory = filteredHistory.slice(
+    requestPage * REQUEST_PAGE_SIZE,
+    (requestPage + 1) * REQUEST_PAGE_SIZE
+  );
 
-      if (aVal < bVal) return requestSortDir === "ASC" ? -1 : 1;
-      if (aVal > bVal) return requestSortDir === "ASC" ? 1 : -1;
-      return 0;
-    });
+  const visibleRequests =
+    requestView === "PENDING" ? requests : paginatedHistory;
+
+  const rowCount =
+    requestView === "PENDING"
+      ? requests.length
+      : filteredHistory.length;
+
+  const totalPages =
+    requestView === "PENDING"
+      ? requestTotalPages
+      : historyTotalPages;
 
   /* ===================== RENDER ===================== */
 
   return (
-    <div style={{ padding: "40px", fontFamily: "Arial" }}>
+    <div style={{ padding: 40, fontFamily: "Arial" }}>
 
       {/* HEADER */}
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
         <h2>Welcome Admin</h2>
-        <button
-          onClick={() => window.confirm("Logout?") && onLogout()}
-          style={{
-            backgroundColor: "#d9534f",
-            color: "white",
-            padding: "8px 16px",
-            border: "none",
-            borderRadius: 4
-          }}
-        >
+        <button onClick={onLogout} style={{ background: "#d9534f", color: "white" }}>
           Logout
         </button>
       </div>
@@ -183,21 +180,18 @@ function AdminDashboard({ onLogout }) {
         <button onClick={() => {
           resetViews();
           setShowRequests(true);
-          setRequestFilter("PENDING");
+          setRequestView("PENDING");
           setRequestPage(0);
-          loadRequests("PENDING", 0);
+          loadPendingRequests(0);
         }}>
           Account Requests
         </button>
 
-        <button
-          onClick={() => {
-            resetViews();
-            setShowAccounts(true);
-            setPage(0);
-          }}
-          style={{ marginLeft: 10 }}
-        >
+        <button onClick={() => {
+          resetViews();
+          setShowAccounts(true);
+          setAccountPage(0);
+        }} style={{ marginLeft: 10 }}>
           All Accounts
         </button>
 
@@ -210,64 +204,59 @@ function AdminDashboard({ onLogout }) {
         </button>
       </div>
 
-      <hr />
-
       {/* ===================== REQUESTS ===================== */}
       {showRequests && (
         <>
           <h3>Account Requests</h3>
 
-          <div style={{ marginBottom: 15 }}>
-            {["PENDING", "APPROVED", "REJECTED"].map(s => (
-              <button
-                key={s}
-                onClick={() => {
-                  setRequestFilter(s);
-                  setRequestPage(0);
-                  loadRequests(s, 0);
-                }}
-                style={{
-                  marginRight: 10,
-                  fontWeight: requestFilter === s ? "bold" : "normal"
-                }}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
+          <button onClick={() => {
+            setRequestView("PENDING");
+            setRequestPage(0);
+            loadPendingRequests(0);
+          }}>
+            Pending
+          </button>
 
-          <div style={{ marginBottom: 15 }}>
-            <input
-              placeholder="Search username / phone / account type"
-              value={requestSearch}
-              onChange={e => setRequestSearch(e.target.value)}
-              style={{ marginRight: 10 }}
-            />
+          <button onClick={() => {
+            setRequestView("HISTORY");
+            setHistoryStatus("ALL");
+            setRequestPage(0);
+            loadHistoryRequests();
+          }} style={{ marginLeft: 10 }}>
+            Approved / Rejected
+          </button>
 
+          {requestView === "HISTORY" && (
             <select
-              value={requestSortBy}
-              onChange={e => setRequestSortBy(e.target.value)}
-            >
-              <option value="createdAt">Created Date</option>
-              <option value="username">Username</option>
-              <option value="accountType">Account Type</option>
-            </select>
-
-            <button
-              onClick={() =>
-                setRequestSortDir(d => (d === "ASC" ? "DESC" : "ASC"))
-              }
+              value={historyStatus}
+              onChange={e => {
+                setHistoryStatus(e.target.value);
+                setRequestPage(0);
+              }}
               style={{ marginLeft: 10 }}
             >
-              {requestSortDir === "ASC" ? "↑ Asc" : "↓ Desc"}
-            </button>
-          </div>
+              <option value="ALL">All</option>
+              <option value="APPROVED">Approved</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+          )}
+
+          <input
+            placeholder="Search..."
+            value={requestSearch}
+            onChange={e => setRequestSearch(e.target.value)}
+            style={{ display: "block", margin: "10px 0" }}
+          />
+
+          <p style={{ fontSize: 13, color: "gray" }}>
+            Showing {rowCount} request{rowCount !== 1 && "s"}
+          </p>
 
           {visibleRequests.length === 0 ? (
-            <p>No {requestFilter.toLowerCase()} requests</p>
+            <p>No requests found</p>
           ) : (
             <>
-              <table border="1" cellPadding="8" style={{ width: "100%" }}>
+              <table border="1" width="100%" cellPadding="8">
                 <thead>
                   <tr>
                     <th>User</th>
@@ -299,31 +288,22 @@ function AdminDashboard({ onLogout }) {
                 </tbody>
               </table>
 
-              {/* ===== PAGINATION ===== */}
-              {requestTotalPages > 1 && (
-                <div style={{ marginTop: 12 }}>
+              {totalPages > 1 && (
+                <div style={{ marginTop: 10 }}>
                   <button
                     disabled={requestPage === 0}
-                    onClick={() => {
-                      const p = requestPage - 1;
-                      setRequestPage(p);
-                      loadRequests(requestFilter, p);
-                    }}
+                    onClick={() => setRequestPage(p => p - 1)}
                   >
                     Prev
                   </button>
 
-                  <span style={{ margin: "0 12px" }}>
-                    Page {requestPage + 1} of {requestTotalPages}
+                  <span style={{ margin: "0 10px" }}>
+                    Page {requestPage + 1} of {totalPages}
                   </span>
 
                   <button
-                    disabled={requestPage + 1 >= requestTotalPages}
-                    onClick={() => {
-                      const p = requestPage + 1;
-                      setRequestPage(p);
-                      loadRequests(requestFilter, p);
-                    }}
+                    disabled={requestPage + 1 >= totalPages}
+                    onClick={() => setRequestPage(p => p + 1)}
                   >
                     Next
                   </button>
@@ -344,31 +324,27 @@ function AdminDashboard({ onLogout }) {
             value={search}
             onChange={e => {
               setSearch(e.target.value);
-              setPage(0);
+              setAccountPage(0);
             }}
             style={{ marginBottom: 10 }}
           />
 
-          <table border="1" cellPadding="8" style={{ width: "100%" }}>
+          <p style={{ fontSize: 13, color: "gray" }}>
+            Showing {accounts.length} account(s)
+          </p>
+
+          <table border="1" width="100%" cellPadding="8">
             <thead>
               <tr>
-                <th onClick={() => toggleSort("accountNumber")} style={{ cursor: "pointer" }}>
-                  Account No {sortBy === "accountNumber" && (sortDir === "ASC" ? "↑" : "↓")}
-                </th>
-                <th onClick={() => toggleSort("accountType")} style={{ cursor: "pointer" }}>
-                  Account Type {sortBy === "accountType" && (sortDir === "ASC" ? "↑" : "↓")}
-                </th>
-                <th onClick={() => toggleSort("balance")} style={{ cursor: "pointer" }}>
-                  Balance {sortBy === "balance" && (sortDir === "ASC" ? "↑" : "↓")}
-                </th>
+                <th onClick={() => toggleSort("accountNumber")}>Account No</th>
+                <th onClick={() => toggleSort("accountType")}>Type</th>
+                <th onClick={() => toggleSort("balance")}>Balance</th>
               </tr>
             </thead>
             <tbody>
               {accounts.length === 0 ? (
                 <tr>
-                  <td colSpan="3" style={{ textAlign: "center" }}>
-                    No accounts found
-                  </td>
+                  <td colSpan="3" align="center">No accounts found</td>
                 </tr>
               ) : (
                 accounts.map(acc => (
@@ -382,27 +358,33 @@ function AdminDashboard({ onLogout }) {
             </tbody>
           </table>
 
-          <div style={{ marginTop: 10 }}>
-            <button disabled={page === 0} onClick={() => setPage(p => p - 1)}>
-              Prev
-            </button>
+          {accountTotalPages > 1 && (
+            <div style={{ marginTop: 10 }}>
+              <button
+                disabled={accountPage === 0}
+                onClick={() => setAccountPage(p => p - 1)}
+              >
+                Prev
+              </button>
 
-            <span style={{ margin: "0 10px" }}>
-              {page + 1} / {totalPages || 1}
-            </span>
+              <span style={{ margin: "0 10px" }}>
+                Page {accountPage + 1} of {accountTotalPages}
+              </span>
 
-            <button
-              disabled={page + 1 >= totalPages}
-              onClick={() => setPage(p => p + 1)}
-            >
-              Next
-            </button>
-          </div>
+              <button
+                disabled={accountPage + 1 >= accountTotalPages}
+                onClick={() => setAccountPage(p => p + 1)}
+              >
+                Next
+              </button>
+            </div>
+          )}
         </>
       )}
 
       {showCards && <AdminCardsPage />}
       {showLoans && <AdminLoansPage />}
+
     </div>
   );
 }
