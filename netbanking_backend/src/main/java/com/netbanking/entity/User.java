@@ -1,5 +1,6 @@
 package com.netbanking.entity;
 
+import com.netbanking.enums.UserRole;
 import jakarta.persistence.*;
 import java.time.Instant;
 
@@ -7,14 +8,15 @@ import java.time.Instant;
 @Table(name = "users")
 public class User {
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String role;   // USER or ADMIN
+    private UserRole role;   // USER or ADMIN
 
-    public String getRole() {
+    public UserRole getRole() {
         return role;
     }
 
-    public void setRole(String role) {
+    public void setRole(UserRole role) {
         this.role = role;
     }
 

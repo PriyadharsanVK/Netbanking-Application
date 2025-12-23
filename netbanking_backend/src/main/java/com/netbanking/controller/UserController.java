@@ -14,6 +14,8 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.netbanking.enums.UserRole.USER;
+
 @Component
 @Path("/users")
 @Consumes(MediaType.APPLICATION_JSON)
@@ -40,7 +42,7 @@ public class UserController {
         }
 
         User user = new User();
-        user.setRole("USER");
+        user.setRole(USER);
         user.setUsername(request.getUsername());
         user.setPasswordHash(
                 passwordEncoder.encode(request.getPassword())

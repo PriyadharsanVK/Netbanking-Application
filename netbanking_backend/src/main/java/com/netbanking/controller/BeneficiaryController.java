@@ -16,6 +16,7 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.WebApplicationException;
 
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -46,7 +47,6 @@ public class BeneficiaryController {
     @POST
     public Response addBeneficiary(Beneficiary request) {
 
-        // 1️⃣ Validate user
         User user = userRepository.findById(request.getUser().getId())
                 .orElseThrow(() -> new WebApplicationException(
                         Response.status(Response.Status.NOT_FOUND)
@@ -55,7 +55,6 @@ public class BeneficiaryController {
                                 .build()
                 ));
 
-        // 2️⃣ Check account exists
         Account account = accountRepository
                 .findByAccountNumber(request.getAccountNumber())
                 .orElseThrow(() -> new WebApplicationException(
@@ -65,8 +64,8 @@ public class BeneficiaryController {
                                 .build()
                 ));
 
-        // 3️⃣ Prevent duplicate beneficiary
-        if (beneficiaryRepository.existsByUserIdAndAccountNumber(
+        // ✅ FIXED DUPLICATE CHECK (soft-delete aware)
+        if (beneficiaryRepository.existsByUserIdAndAccountNumberAndActiveTrue(
                 user.getId(), request.getAccountNumber())) {
 
             throw new WebApplicationException(
@@ -77,20 +76,19 @@ public class BeneficiaryController {
             );
         }
 
-        // 4️⃣ Save beneficiary
         Beneficiary beneficiary = new Beneficiary();
         beneficiary.setUser(user);
         beneficiary.setName(request.getName());
         beneficiary.setAccountNumber(request.getAccountNumber());
         beneficiary.setActive(true);
 
-        beneficiaryRepository.save(beneficiary);
+        beneficiaryRepository.saveAndFlush(beneficiary);
 
         return Response.ok("Beneficiary added successfully").build();
     }
 
 
-    /* ---------- VIEW ALL BENEFICIARIES OF USER ---------- */
+    /* ---------- VIEW BENEFICIARIES ---------- */
     @GET
     @Path("/user/{userId}")
     public Response getUserBeneficiaries(@PathParam("userId") Long userId) {
@@ -120,20 +118,28 @@ public class BeneficiaryController {
     /* ---------- DELETE BENEFICIARY (SOFT DELETE) ---------- */
     @DELETE
     @Path("/{beneficiaryId}")
+    @Transactional
     public Response deleteBeneficiary(@PathParam("beneficiaryId") Long beneficiaryId) {
 
         Beneficiary beneficiary = beneficiaryRepository.findById(beneficiaryId)
-                .orElseThrow(() ->
-                        new NotFoundException("Beneficiary not found")
-                );
+                .orElseThrow(() -> new WebApplicationException(
+                        Response.status(Response.Status.NOT_FOUND)
+                                .entity("Beneficiary not found")
+                                .type(MediaType.TEXT_PLAIN)
+                                .build()
+                ));
+
+        if (!beneficiary.isActive()) {
+            return Response.status(Response.Status.NO_CONTENT).build();
+        }
 
         beneficiary.setActive(false);
-        beneficiaryRepository.save(beneficiary);
+        beneficiaryRepository.saveAndFlush(beneficiary);
 
-        return Response.ok("Beneficiary deleted successfully").build();
+        return Response.noContent().build();
     }
 
-    /* ---------- TRANSFER TO BENEFICIARY ---------- */
+    /* ---------- TRANSFER ---------- */
     @POST
     @Path("/{beneficiaryId}/transfer")
     public Response transferToBeneficiary(
@@ -142,25 +148,47 @@ public class BeneficiaryController {
     ) {
 
         Beneficiary beneficiary = beneficiaryRepository.findById(beneficiaryId)
-                .orElseThrow(() ->
-                        new NotFoundException("Beneficiary not found")
-                );
+                .orElseThrow(() -> new WebApplicationException(
+                        Response.status(Response.Status.NOT_FOUND)
+                                .entity("Beneficiary not found")
+                                .type(MediaType.TEXT_PLAIN)
+                                .build()
+                ));
+
+        if (!beneficiary.isActive()) {
+            throw new WebApplicationException(
+                    Response.status(Response.Status.BAD_REQUEST)
+                            .entity("Beneficiary is inactive")
+                            .type(MediaType.TEXT_PLAIN)
+                            .build()
+            );
+        }
 
         Account fromAccount = accountRepository.findById(request.getFromAccountId())
-                .orElseThrow(() ->
-                        new NotFoundException("Source account not found")
-                );
+                .orElseThrow(() -> new WebApplicationException(
+                        Response.status(Response.Status.NOT_FOUND)
+                                .entity("Source account not found")
+                                .type(MediaType.TEXT_PLAIN)
+                                .build()
+                ));
 
-        // 🔐 SECURITY CHECK
         if (!fromAccount.getUser().getId().equals(beneficiary.getUser().getId())) {
-            throw new ForbiddenException("Unauthorized transfer attempt");
+            throw new WebApplicationException(
+                    Response.status(Response.Status.FORBIDDEN)
+                            .entity("Unauthorized transfer attempt")
+                            .type(MediaType.TEXT_PLAIN)
+                            .build()
+            );
         }
 
         Account toAccount = accountRepository
                 .findByAccountNumber(beneficiary.getAccountNumber())
-                .orElseThrow(() ->
-                        new NotFoundException("Destination account not found")
-                );
+                .orElseThrow(() -> new WebApplicationException(
+                        Response.status(Response.Status.NOT_FOUND)
+                                .entity("Destination account not found")
+                                .type(MediaType.TEXT_PLAIN)
+                                .build()
+                ));
 
         transactionService.transfer(
                 fromAccount,

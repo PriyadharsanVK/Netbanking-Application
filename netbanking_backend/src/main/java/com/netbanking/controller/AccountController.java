@@ -49,7 +49,9 @@ public class AccountController {
                         acc.getId(),
                         acc.getAccountNumber(),
                         acc.getAccountType(),
-                        acc.getBalance()
+                        acc.getBalance(),
+                        acc.getStatus(),
+                        acc.getCreatedAt()
                 ))
                 .toList();
 
@@ -102,7 +104,9 @@ public class AccountController {
                 account.getId(),
                 account.getAccountNumber(),
                 account.getAccountType(),
-                account.getBalance()
+                account.getBalance(),
+                account.getStatus(),
+                account.getCreatedAt()
         );
 
         return Response.ok(response).build();
@@ -119,7 +123,9 @@ public class AccountController {
                         acc.getId(),
                         acc.getAccountNumber(),
                         acc.getAccountType(),
-                        acc.getBalance()
+                        acc.getBalance(),
+                        acc.getStatus(),
+                        acc.getCreatedAt()
                 ))
                 .toList();
 

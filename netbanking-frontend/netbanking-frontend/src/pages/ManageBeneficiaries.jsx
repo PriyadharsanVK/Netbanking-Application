@@ -11,6 +11,10 @@ function ManageBeneficiaries({ session }) {
   const [name, setName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [beneficiaries, setBeneficiaries] = useState([]);
+  // ✅ FILTER OUT SOFT-DELETED BENEFICIARIES
+  const visibleBeneficiaries = beneficiaries.filter(
+    b => b.active !== false
+  );
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -53,13 +57,15 @@ function ManageBeneficiaries({ session }) {
   }
 
   async function handleDelete(id) {
-    try {
-      await deleteBeneficiary(id);
-      loadBeneficiaries();
-    } catch (err) {
-      setError(err.message);
-    }
+  try {
+    await deleteBeneficiary(id);
+    const updated = await getUserBeneficiaries(session.userId);
+    setBeneficiaries(updated);
+  } catch (err) {
+    setError(err.message);
   }
+}
+
 
   return (
     <div>
@@ -91,7 +97,7 @@ function ManageBeneficiaries({ session }) {
         <p>No beneficiaries added</p>
       ) : (
         <ul>
-          {beneficiaries.map(b => (
+          {visibleBeneficiaries.map(b => (
             <li key={b.id}>
               {b.name} – {b.accountNumber}
               <button

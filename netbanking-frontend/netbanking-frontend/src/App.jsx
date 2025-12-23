@@ -6,7 +6,7 @@ import ManageBeneficiaries from "./pages/ManageBeneficiaries.jsx";
 import Transfer from "./pages/Transfer.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import CardsPage from "./pages/CardsPage";
-import LoansPage from "./pages/LoansPage";   // ✅ NEW
+import LoansPage from "./pages/LoansPage";
 
 function App() {
   const [session, setSession] = useState(() => {
@@ -21,17 +21,8 @@ function App() {
 
   const [screen, setScreen] = useState("dashboard");
 
-  /* ---------- NOT LOGGED IN ---------- */
-  if (!session) {
-    return <Login onLogin={setSession} />;
-  }
-
   function handleLogout() {
-    const confirmLogout = window.confirm(
-      "Are you sure you want to logout?"
-    );
-
-    if (!confirmLogout) return;
+    if (!window.confirm("Are you sure you want to logout?")) return;
 
     localStorage.removeItem("session");
     localStorage.removeItem("account");
@@ -41,16 +32,17 @@ function App() {
     setScreen("dashboard");
   }
 
+  /* ---------- NOT LOGGED IN ---------- */
+  if (!session) {
+    return <Login onLogin={setSession} />;
+  }
+
   /* ---------- ADMIN FLOW ---------- */
   if (session.role === "ADMIN") {
     return (
       <AdminDashboard
         admin={session}
-        onLogout={() => {
-          setSession(null);
-          setAccount(null);
-          setScreen("dashboard");
-        }}
+        onLogout={handleLogout}
       />
     );
   }
@@ -68,7 +60,7 @@ function App() {
   const userSession = {
     userId: session.userId,
     accountId: account.id,
-    accountNumber: account.accountNumber,
+    accountNumber: account.accountNumber
   };
 
   return (
@@ -91,11 +83,9 @@ function App() {
         </button>
       </div>
 
-      {/* SIMPLE NAV BAR */}
+      {/* NAV BAR */}
       <div style={{ marginBottom: "20px" }}>
-        <button onClick={() => setScreen("dashboard")}>
-          Dashboard
-        </button>
+        <button onClick={() => setScreen("dashboard")}>Dashboard</button>
 
         <button
           onClick={() => setScreen("beneficiaries")}
@@ -118,7 +108,6 @@ function App() {
           Cards
         </button>
 
-        {/* ✅ NEW */}
         <button
           onClick={() => setScreen("loans")}
           style={{ marginLeft: "10px" }}
@@ -134,7 +123,7 @@ function App() {
       )}
       {screen === "transfer" && <Transfer session={userSession} />}
       {screen === "cards" && <CardsPage session={userSession} />}
-      {screen === "loans" && <LoansPage session={userSession} />} {/* ✅ NEW */}
+      {screen === "loans" && <LoansPage session={userSession} />}
     </div>
   );
 }

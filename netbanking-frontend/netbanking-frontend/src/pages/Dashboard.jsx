@@ -27,13 +27,27 @@ function Dashboard({ session, onNavigate }) {
 
   /* ---------- LOAD CURRENT ACCOUNT ---------- */
   useEffect(() => {
+    if (!userId || !accountId) {
+      setError("No account selected");
+      return;
+    }
     loadCurrentAccount();
   }, [userId, accountId]);
 
   async function loadCurrentAccount() {
     try {
       const accounts = await getUserAccounts(userId);
-      const acc = accounts.find(a => a.id === accountId);
+
+      // 🔑 FIX: normalize id vs accountId
+      const acc = accounts.find(
+        a => a.id === accountId || a.accountId === accountId
+      );
+
+      if (!acc) {
+        setError("Account not found");
+        return;
+      }
+
       setCurrentAccount(acc);
     } catch (err) {
       setError(err.message);
@@ -69,9 +83,14 @@ function Dashboard({ session, onNavigate }) {
       return;
     }
 
+    if (!accountId) {
+      setError("No account selected");
+      return;
+    }
+
     try {
       const data = await getTransactionHistory(accountId);
-      setTransactions(data);
+      setTransactions(data || []);
       setCurrentPage(1);
       setShowTransactions(true);
     } catch (err) {
@@ -192,8 +211,8 @@ function Dashboard({ session, onNavigate }) {
                 </tr>
               </thead>
               <tbody>
-                {paginatedTransactions.map((tx, i) => (
-                  <tr key={i}>
+                {paginatedTransactions.map(tx => (
+                  <tr key={tx.id ?? tx.createdAt}>
                     <td>{new Date(tx.createdAt).toLocaleString()}</td>
                     <td>{tx.type}</td>
                     <td>₹{tx.amount}</td>

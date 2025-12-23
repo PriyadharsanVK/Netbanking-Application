@@ -13,6 +13,7 @@ function SelectAccount({ userId, onSelectAccount }) {
 
   useEffect(() => {
     if (userId) {
+      localStorage.removeItem("account");
       loadData();
     }
   }, [userId]);
@@ -22,15 +23,35 @@ function SelectAccount({ userId, onSelectAccount }) {
       const accData = await getUserAccounts(userId);
       const reqData = await getUserAccountRequests(userId);
 
-      setAccounts(accData);
-      setRequests(reqData);
+      setAccounts(accData || []);
+      setRequests(reqData || []);
     } catch (err) {
       setError(err.message);
     }
   }
 
-  const hasPendingRequest =
-    requests.some(r => r.status === "PENDING");
+  const hasPendingRequest = requests.some(
+    r => r.status === "PENDING"
+  );
+
+  function handleSelectAccount(acc) {
+    const normalizedAccount = {
+      id: acc.accountId,      // ✅ FORCE id
+      accountId: acc.accountId,
+      accountNumber: acc.accountNumber,
+      accountType: acc.accountType,
+      balance: acc.balance,
+      status: acc.status
+    };
+
+    localStorage.setItem(
+      "account",
+      JSON.stringify(normalizedAccount)
+    );
+
+    onSelectAccount(normalizedAccount);
+  }
+
 
   if (showRequest) {
     return (
@@ -56,14 +77,12 @@ function SelectAccount({ userId, onSelectAccount }) {
       ) : (
         <ul>
           {accounts.map(acc => (
-            <li key={acc.id}>
+            <li key={acc.id ?? acc.accountId}>
               <b>{acc.accountNumber}</b> | {acc.accountType}
               <button
                 style={{ marginLeft: "10px" }}
-                onClick={() => {
-                  onSelectAccount(acc);
-                  localStorage.setItem("account", JSON.stringify(acc));
-                }}>
+                onClick={() => handleSelectAccount(acc)}
+              >
                 Login
               </button>
             </li>

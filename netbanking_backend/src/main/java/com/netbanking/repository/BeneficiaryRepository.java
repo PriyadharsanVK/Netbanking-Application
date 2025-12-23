@@ -7,7 +7,12 @@ import java.util.List;
 
 public interface BeneficiaryRepository extends JpaRepository<Beneficiary, Long> {
 
-    List<Beneficiary> findByUserIdAndActiveTrue(Long userId);
+    List<Beneficiary> findByUserIdAndActiveTrue(Long accountId);
 
     boolean existsByUserIdAndAccountNumber(Long userId, String accountNumber);
+    boolean existsByUserIdAndAccountNumberAndActiveTrue(
+            Long userId,
+            String accountNumber
+    );
+
 }

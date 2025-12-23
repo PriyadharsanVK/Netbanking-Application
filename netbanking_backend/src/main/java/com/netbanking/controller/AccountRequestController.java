@@ -6,12 +6,15 @@ import com.netbanking.entity.AccountRequest;
 import com.netbanking.entity.User;
 import com.netbanking.repository.AccountRequestRepository;
 import com.netbanking.repository.UserRepository;
+
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 @Path("/account-requests")
@@ -29,7 +32,6 @@ public class AccountRequestController {
     }
 
     @POST
-//    @Path("/")
     public Response createRequest(AccountRequestCreateRequest request) {
 
         User user = userRepository.findById(request.getUserId())
@@ -45,7 +47,9 @@ public class AccountRequestController {
 
         accountRequestRepository.save(ar);
 
-        return Response.ok("Account request submitted").build();
+        return Response.status(Response.Status.CREATED)
+                .entity("Account request submitted")
+                .build();
     }
 
     @GET
@@ -62,9 +66,8 @@ public class AccountRequestController {
                         r.getStatus(),
                         r.getCreatedAt()
                 ))
-                .toList();
+                .collect(Collectors.toList());
 
         return Response.ok(response).build();
     }
-
 }

@@ -38,11 +38,11 @@ public class Loan {
     private String status; // ACTIVE / CLOSED
 
     @Column(name = "start_date", updatable = false)
-    private LocalDate startDate;
+    private Instant startDate;
 
     @PrePersist
     protected void onCreate() {
-        this.startDate = LocalDate.now();
+        this.startDate = Instant.now();
         this.status = "ACTIVE";
     }
 
@@ -73,11 +73,11 @@ public class Loan {
 
     public String getStatus() { return status; }
 
-    public void setStartDate(LocalDate startDate) {
+    public void setStartDate(Instant startDate) {
         this.startDate = startDate;
     }
 
     public void setStatus(String status) { this.status = status; }
 
-    public LocalDate getStartDate() { return startDate; }
+    public Instant getStartDate() { return startDate; }
 }

@@ -1,41 +1,38 @@
 package com.netbanking.dto;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDateTime;
 
 public class AdminAccountResponse {
 
-    private Long id;
+    private Long accountId;
     private String accountNumber;
     private String accountType;
     private BigDecimal balance;
     private String status;
-    private Long userId;
-    private String username;
+    private Instant createdAt;
 
     public AdminAccountResponse(
-            Long id,
+            Long accountId,
             String accountNumber,
             String accountType,
             BigDecimal balance,
             String status,
-            Long userId,
-            String username
+            Instant createdAt
     ) {
-        this.id = id;
+        this.accountId = accountId;
         this.accountNumber = accountNumber;
         this.accountType = accountType;
         this.balance = balance;
         this.status = status;
-        this.userId = userId;
-        this.username = username;
+        this.createdAt = createdAt;
     }
 
-    // getters only
-    public Long getId() { return id; }
+    public Long getAccountId() { return accountId; }
     public String getAccountNumber() { return accountNumber; }
     public String getAccountType() { return accountType; }
     public BigDecimal getBalance() { return balance; }
     public String getStatus() { return status; }
-    public Long getUserId() { return userId; }
-    public String getUsername() { return username; }
+    public Instant getCreatedAt() { return createdAt; }
 }

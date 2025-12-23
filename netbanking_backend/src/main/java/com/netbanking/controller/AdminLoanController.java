@@ -95,7 +95,7 @@ public class AdminLoanController {
         loan.setTenureMonths(tenure);
         loan.setEmiAmount(emi);
         loan.setStatus("ACTIVE");
-        loan.setStartDate(LocalDate.now());
+        loan.setStartDate(Instant.now());
 
         loanRepository.save(loan);
 
